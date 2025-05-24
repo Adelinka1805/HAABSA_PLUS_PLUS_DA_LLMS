@@ -13,10 +13,10 @@ from nltk import *
 from config import *
 
 #path to the java runtime environment
-nltk.internals.config_java('C:/Program Files/Java/jdk-20/bin/java.exe')
-java_path = 'C:/Program Files/Java/jdk-20/bin/java.exe'
+nltk.internals.config_java('/usr/bin/java')
+java_path = '/usr/bin/java'
 os.environ['JAVAHOME'] = java_path
-owlready2.JAVA_EXE = 'C:/Program Files/Java/jdk-20/bin/java.exe'
+owlready2.JAVA_EXE = '/usr/bin/java'
 
 class OntReasoner():
     def __init__(self):

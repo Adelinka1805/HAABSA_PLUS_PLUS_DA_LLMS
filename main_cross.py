@@ -37,14 +37,13 @@ def main(_):
     else:
         backup = False
 
-    # NOTE: PROBLEM WHERE DO WE GET THIS FILES ?
     # NOTE: File paths for cross-validation and SVM data
-    BASE_train = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_train_'
-    BASE_val = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'
-    BASE_svm_train = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_train_svm_'
-    BASE_svm_val = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_svm_'
-    REMAIN_val = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_remainder_'
-    REMAIN_svm_val = "C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_remainder_'
+    BASE_train = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_train_'
+    BASE_val = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'
+    BASE_svm_train = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_train_svm_'
+    BASE_svm_val = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_svm_'
+    REMAIN_val = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_remainder_'
+    REMAIN_svm_val = "data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_remainder_'
 
     # Number of k-fold cross validations
     split_size = 10
@@ -67,7 +66,7 @@ def main(_):
             remaining_size_vec.append(remaining_size)
 
         # NOTE: I am pretty sure we need to replace this
-        with open("C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_results_'+str(FLAGS.year)+"/ONTOLOGY_"+str(FLAGS.year)+'.txt', 'w') as result:
+        with open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_results_'+str(FLAGS.year)+"/ONTOLOGY_"+str(FLAGS.year)+'.txt', 'w') as result:
             print(str(split_size)+'-fold cross validation results')
             print('Accuracy: {}, St Dev:{}'.format(np.mean(np.asarray(acc)), np.std(np.asarray(acc))))
             print(acc)
@@ -128,7 +127,7 @@ def main(_):
             print('iteration: '+ str(i))
 
         # NOTE: I am pretty sure we need to replace this
-        with open("C:/Users/Maria/Desktop/data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_results_'+str(FLAGS.year)+"/LCRROT_ALT_"+str(FLAGS.year)+'.txt', 'w') as result:
+        with open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_results_'+str(FLAGS.year)+"/LCRROT_ALT_"+str(FLAGS.year)+'.txt', 'w') as result:
             result.write(str(acc))
             result.write('Accuracy: {}, St Dev:{} /n'.format(np.mean(np.asarray(acc)), np.std(np.asarray(acc))))
             print(str(split_size)+'-fold cross validation results')
