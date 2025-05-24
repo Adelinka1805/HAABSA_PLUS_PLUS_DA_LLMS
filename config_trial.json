@@ -1,0 +1,17 @@
+{
+    "year": "2015",
+    "embedding_type": "BERT",
+    "batch_size": 32,
+    "learning_rate": 0.08,
+    "epochs": 100,
+    "da_type": "none",
+    "embedding_dim": 768,
+    "n_hidden": 300,
+    "keep_prob1": 0.6,
+    "keep_prob2": 0.6,
+    "momentum": 0.9,
+    "l2_reg": 0.01,
+    "cross_validation": true,
+    "save_model": true,
+    "output_dir": "results/trial_1"
+} 

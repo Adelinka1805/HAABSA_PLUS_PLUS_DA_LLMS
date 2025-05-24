@@ -1,0 +1,17 @@
+{
+    "year": "2015",
+    "embedding_type": "ELMo",
+    "batch_size": 64,
+    "learning_rate": 0.05,
+    "epochs": 100,
+    "da_type": "none",
+    "embedding_dim": 1024,
+    "n_hidden": 400,
+    "keep_prob1": 0.7,
+    "keep_prob2": 0.7,
+    "momentum": 0.95,
+    "l2_reg": 0.005,
+    "cross_validation": true,
+    "save_model": true,
+    "output_dir": "results/trial_2"
+} 
