@@ -135,7 +135,7 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
     # NOTE: Prints all the flags with their current values (this method comes from config.py), can be commented out to avoid spam 
     # print_config()
     # NOTE: specify the GPU here
-    with tf.device('/gpu:1'):
+    with tf.device('/gpu:0'):
         # NOTE:  Load word embeddings from file and also create a dictionary that maps each word to an index
         word_id_mapping, w2v = load_w2v(FLAGS.embedding_path, FLAGS.embedding_dim)
         # NOTE:  Turn the word vectors into a constant TensorFlow variable (we won't train these embeddings further)
