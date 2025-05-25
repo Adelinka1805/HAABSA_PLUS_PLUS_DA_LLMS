@@ -133,7 +133,7 @@ def lcr_rot(input_fw, input_bw, sen_len_fw, sen_len_bw, target, sen_len_tr, keep
 
 def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning_rate=FLAGS.learning_rate, keep_prob=FLAGS.keep_prob1, momentum=FLAGS.momentum, l2=FLAGS.l2_reg):
     # NOTE: Prints all the flags with their current values (this method comes from config.py), can be commented out to avoid spam 
-    # print_config()
+    print_config()
     # NOTE: specify the GPU here
     with tf.device('/gpu:1'):
         # NOTE:  Load word embeddings from file and also create a dictionary that maps each word to an index
@@ -271,20 +271,8 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
         max_prob = None
         step = None
 
-        # USE THIS DURING NORMAL MODEL RUNNING 
         # NOTE: Start training loop — repeat for a set number of iterations (epochs)
-        # NOTE: if one runs the main_hyper.py, set the number of epochs to 20 and UNCOMMENT THE EARLY STOPPING USED  
-        #for i in range(FLAGS.n_iter):
-
-        # USE THI DURING RUNNING HYPER PARAMETER OPTIMIZATION CODE 
-        # Add early stopping parameters
-        patience = 5  # Number of epochs to wait for improvement
-        min_delta = 0.001  # Minimum change in validation accuracy to be considered as improvement
-        patience_counter = 0
-        
-        print("\nStarting training with early stopping (patience={})...".format(patience))
-        from tqdm import tqdm
-        for i in tqdm(range(FLAGS.n_iter), desc="Training Progress", unit="epoch"):
+        for i in range(FLAGS.n_iter):
             trainacc, traincnt = 0., 0
 
             # NOTE: For each batch of training data:
@@ -339,9 +327,10 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
             cost = cost / cnt
             print('Iter {}: mini-batch loss={:.6f}, train acc={:.6f}, test acc={:.6f}, combined acc={:.6f}'.format(i, cost,trainacc, acc, totalacc))
 
+            # NOTE: Log test performance to TensorBoard
             summary = sess.run(test_summary_op, feed_dict={test_loss: cost, test_acc: acc})
             test_summary_writer.add_summary(summary, step)
-            
+            # NOTE: If this is the best accuracy so far, save these results
             if acc > max_acc:
                 max_acc = acc
                 max_fw = fw
@@ -351,18 +340,6 @@ def main(train_path, test_path, accuracyOnt, test_size, remaining_size, learning
                 max_ty = ty
                 max_py = py
                 max_prob = p
-                # CODE BELOW UNTIL THE END OF THIS IF LOOP SHOULD ONLY BE UNCOMMENTED WHEN WE HAVE HYPERPARAMETER optimization, otherwise comment out it all. 
-                patience_counter = 0
-                print(f"  New best validation accuracy: {acc:.4f}")
-            else:
-                patience_counter += 1
-                print(f"  No improvement for {patience_counter} epochs")
-                
-            # Early stopping
-            if patience_counter >= patience:
-                print(f"\nEarly stopping triggered after {i+1} epochs")
-                print(f"Best validation accuracy: {max_acc:.4f}")
-                break
 
         # NOTE: After training, calculate evaluation metrics on the best results
         P = precision_score(max_ty, max_py, average=None)

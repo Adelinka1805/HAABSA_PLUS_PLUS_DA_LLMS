@@ -1,19 +1,17 @@
-import tensorflow as tf
-#import lcrModelAlt
-#import lcrModel
-#import lcrModelInverse
-#import svmModel
-#import cabascModel
-# NOTE: Import the model we're tuning — this connects to the main() method in lcrModelAlt_hierarchical_v4.py
-import lcrModelAlt_hierarchical_v4
+'''
+This method runs hyperparameter optimization. It uses 80% of training data to train the model and 20% of training data to validate the model.
+This method has to be executed before running the final part of main.py with the model training. In loadData.py the method laodHyperData() loads the data for this method.
+To run this method, implement two necessary adjustments to the main model (available in lcrModelAlt_hierarchical_v4.py) to ensure that the early stopping is considered when the model is running.
+Additionally, change the number of train iterations (n_iter) in config.py to 20, after the hyperparameter optimization is done change the number back to 100 for main model training.
 
-# NOTE: Ontology reasoner and data loader (used for preprocessing or initializing training)
+'''
+
+import tensorflow as tf
+import lcrModelAlt_hierarchical_v4
 from OntologyReasoner import OntReasoner
 from loadData import *
-
 # Import parameter configuration and data paths
 from config import *
-
 # Import modules
 import random
 from hyperopt import hp, tpe, fmin, Trials, STATUS_OK
@@ -24,128 +22,39 @@ import os
 import traceback
 from bson import json_util
 import json
+# from tqdm import tqdm  # Add tqdm for progress bars
 
-# NOTE: Load the data for hyperparameter tuning — returns training/test data sizes and label vectors
+# Test data is validation data 
 train_size, test_size, train_polarity_vector, test_polarity_vector = loadHyperData(FLAGS, True)
-remaining_size = 248        # NOTE: portion of test set used in final metric
-accuracyOnt = 0.87          # NOTE: accuracy from an ontology reasoner (used in combined score)
+# Even though is defined here and is passed to the mode, in reality does not have any effect on the obtained result when running hyperparameter optimization   
+remaining_size = 248
+# Hard coded accuracy from the ontology -> NOTE: should we replace for every year bc the ontology accuracy can be different?      
+accuracyOnt = 0.87         
 
-# Define variable spaces for hyperopt to run over
-# NOTE: Global counters to keep track of progress
-eval_num = 0
-best_loss = None
-best_hyperparams = None
-
-# NOTE: Define the search space for the hyperparameters for LCR model
+# Define hyperparmeter space
 lcrspace = [
                 hp.loguniform('learning_rate', np.log(0.01), np.log(0.1)),  # NOTE: Try values between 0.01 and 0.1
                 hp.quniform('keep_prob', 0.45, 0.75, 0.1),                  # NOTE: Dropout between 45% to 75%
                 hp.choice('momentum', [0.85, 0.9, 0.95]),                   # NOTE: Momentum values
-                #hp.choice('momentum', [0.85, 0.9, 0.95, 0.99]),            # NOTE: not sure why this is commented out
                 hp.choice('l2', [0.0001, 0.001]),                           # NOTE: L2 regularization values
-                #hp.choice('l2', [0.00001, 0.0001, 0.001, 0.01, 0.1]),      # NOTE: not sure why this is commented out also
             ]
 
-# NOTE: not used 
-# cabascspace = [
-#                 hp.choice('learning_rate',[0.001,0.005, 0.02, 0.05, 0.06, 0.07, 0.08, 0.09, 0.01, 0.1]),
-#                 hp.quniform('keep_prob', 0.25, 0.75, 0.01),
-#             ]
+eval_num = 0
+best_loss = None
+best_hyperparams = None
 
-# NOTE: not used 
-# svmspace = [
-#                 hp.choice('c', [0.001, 0.01, 0.1, 1, 10, 100, 1000]),
-#                 hp.choice('gamma', [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
-#             ]
-
-# NOTE: Define the objective function to minimize for hyperopt — this runs the model and returns accuracy
-# NOTE: This connects directly to the `main()` method in lcrModelAlt_hierarchical_v4.py
-
-# NOTE: seems like we do not need this one BUT tstructure for all the methods are the same so I did the detailed breakdown on this one 
-# Define objectives for hyperopt
-# NOTE: can we delete it ??? -> I COMMENTED IT OUT
-# def lcr_objective(hyperparams):
-#     global eval_num
-#     global best_loss
-#     global best_hyperparams
-
-#     eval_num += 1
-#     (learning_rate, keep_prob, momentum, l2) = hyperparams
-#     print(hyperparams)      # NOTE: Print the current set of hyperparameters being tried
-    
-#     # NOTE: line below runs the model with current hyperparameters — this calls the main() function from lcrModelAlt_hierarchical_v4.py
-#     # NOTE: PROBLEM we do not have lcrModel -> SOLUTION: replce with lcrModelAlt_hierarchical_v4.main
-#     l, pred1, fw1, bw1, tl1, tr1, _, _ = lcrModel.main(FLAGS.hyper_train_path, FLAGS.hyper_eval_path, accuracyOnt, test_size, remaining_size, learning_rate, keep_prob, momentum, l2)
-    
-#     # NOTE: Reset TensorFlow’s graph so each trial starts fresh
-#     tf.reset_default_graph()
-
-#     # Save training results to disks with unique filenames
-#     print(eval_num, l, hyperparams)
-    
-#     # NOTE: Update the best result if this one is better
-#     if best_loss is None or -l < best_loss:
-#         best_loss = -l
-#         best_hyperparams = hyperparams
-
-#     # NOTE: This is the result format that hyperopt expects
-#     result = {
-#             'loss':   -l,           # NOTE: We minimize loss, so accuracy is negated here
-#             'status': STATUS_OK,
-#             'space': hyperparams,
-#         }
-
-#     save_json_result(str(l), result)
-#     return result
-
-# NOTE: seems like we do not need this one 
-# NOTE: can we delete it ??? -> I COMMENTED IT OUT
-# def lcr_inv_objective(hyperparams):
-#     global eval_num
-#     global best_loss
-#     global best_hyperparams
-
-#     eval_num += 1
-#     (learning_rate, keep_prob, momentum, l2) = hyperparams
-#     print(hyperparams)
-
-#     l, pred1, fw1, bw1, tl1, tr1 = lcrModelInverse.main(FLAGS.hyper_train_path, FLAGS.hyper_eval_path, accuracyOnt, test_size, remaining_size, learning_rate, keep_prob, momentum, l2)
-#     tf.reset_default_graph()
-
-#     # Save training results to disks with unique filenames
-
-#     print(eval_num, l, hyperparams)
-
-#     if best_loss is None or -l < best_loss:
-#         best_loss = -l
-#         best_hyperparams = hyperparams
-
-#     result = {
-#             'loss':   -l,
-#             'status': STATUS_OK,
-#             'space': hyperparams,
-#         }
-
-#     save_json_result(str(l), result)
-
-#     return result
-
-# NOTE: this is the one we need
 def lcr_alt_objective(hyperparams):
-    global eval_num
-    global best_loss
-    global best_hyperparams
-
+    global eval_num, best_loss, best_hyperparams
     eval_num += 1
     (learning_rate, keep_prob, momentum, l2) = hyperparams
-    print(hyperparams)
+    print(f"\n\nEval {eval_num} with hyperparams: {hyperparams}")
 
+    # l here is the best accuracy on the validation set, we only need it 
     l, pred1, fw1, bw1, tl1, tr1 = lcrModelAlt_hierarchical_v4.main(FLAGS.hyper_train_path, FLAGS.hyper_eval_path, accuracyOnt, test_size, remaining_size, learning_rate, keep_prob, momentum, l2)
+    # NOTE: resets the tensorflow computationsal graph to ensure a clean slate for the next trial 
     tf.reset_default_graph()
 
     # Save training results to disks with unique filenames
-
-    print(eval_num, l, hyperparams)
 
     if best_loss is None or -l < best_loss:
         best_loss = -l
@@ -160,70 +69,7 @@ def lcr_alt_objective(hyperparams):
     save_json_result(str(l), result)
 
     return result
-
-# NOTE: can we delete it ??? -> I COMMENTED IT OUT
-# def cabasc_objective(hyperparams):
-#     global eval_num
-#     global best_loss
-#     global best_hyperparams
-
-#     eval_num += 1
-#     (learning_rate, keep_prob) = hyperparams
-#     print(hyperparams)
-
-#     l = cabascModel.main(FLAGS.hyper_train_path, FLAGS.hyper_eval_path, accuracyOnt, test_size, remaining_size, learning_rate, keep_prob)
-#     tf.reset_default_graph()
-
-#     # Save training results to disks with unique filenames
-
-#     print(eval_num, l, hyperparams)
-
-#     if best_loss is None or -l < best_loss:
-#         best_loss = -l
-#         best_hyperparams = hyperparams
-
-#     result = {
-#             'loss':   -l,
-#             'status': STATUS_OK,
-#             'space': hyperparams,
-#         }
-
-#     save_json_result(str(l), result)
-
-#     return result
-
-# NOTE: can we delete it ??? -> I COMMENTED IT OUT 
-# def svm_objective(hyperparams):
-#     global eval_num
-#     global best_loss
-#     global best_hyperparams
-
-#     eval_num += 1
-#     (c, gamma) = hyperparams
-#     print(hyperparams)
-
-#     l = svmModel.main(FLAGS.hyper_svm_train_path, FLAGS.hyper_svm_eval_path, accuracyOnt, test_size, remaining_size, c, gamma)
-#     tf.reset_default_graph()
-
-#     # Save training results to disks with unique filenames
-
-#     print(eval_num, l, hyperparams)
-
-#     if best_loss is None or -l < best_loss:
-#         best_loss = -l
-#         best_hyperparams = hyperparams
-
-#     result = {
-#             'loss':   -l,
-#             'status': STATUS_OK,
-#             'space': hyperparams,
-#         }
-
-#     save_json_result(str(l), result)
-
-#     return result
-
-# NOTE: run one trial of tuning - this function gets called in the loop 
+ 
 # Run a hyperopt trial
 def run_a_trial():
     max_evals = nb_evals = 1
@@ -256,7 +102,6 @@ def run_a_trial():
     print(best_hyperparams)
 
 # NOTE: Utility functions to save and load trial results from disk
-
 def print_json(result):
     """Pretty-print a jsonable structure (e.g.: result)."""
     print(json.dumps(
@@ -306,15 +151,22 @@ def plot_best_model():
     print("Best hyperspace yet:")
     print_json(space_best_model)
 
-# NOTE: below is the main loop: repeatedly run hyperparameter search and evaluate
+total_trials = 0
+max_trials = 100 
 
-while True:
-    print("Optimizing New Model")
+print(f"Starting hyperparameter optimization with maximum {max_trials} trials")
+while total_trials < max_trials:
+    print(f"\nTrial {total_trials + 1}/{max_trials}")
     try:
         run_a_trial()
+        total_trials += 1  
     except Exception as err:
         err_str = str(err)
         print(err_str)
         traceback_str = str(traceback.format_exc())
         print(traceback_str)
     plot_best_model()
+
+print(f"\nHyperparameter optimization completed after {total_trials} trials")
+print("Final best hyperparameters:")
+plot_best_model() 
