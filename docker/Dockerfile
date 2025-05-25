@@ -121,6 +121,7 @@ RUN apt-get update -y && \
     git \
     bzip2 \
     default-jdk \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Set locale
@@ -155,10 +156,22 @@ RUN conda create -n ${CONDA_ENV_NAME} python=3.6 && \
 COPY requirements.txt /tmp/requirements.txt
 RUN ${ENV_PIP} install --no-cache-dir -r /tmp/requirements.txt && \
     ${ENV_PYTHON} -c "import nltk; nltk.download('punkt')" && \
+    ${ENV_PIP} install --no-cache-dir gdown && \
     conda clean -afy && \
     rm /tmp/requirements.txt
 
 WORKDIR /app
+
+# Download, unzip the data, and clean up the zip file
+# Ensure gdown is called from the conda environment where it was installed.
+RUN echo "Downloading data from Google Drive..." && \
+    ${MINICONDA_INSTALL_PATH}/envs/${CONDA_ENV_NAME}/bin/gdown --id 1ULlBQKVuSr4xcE9r1eFc2XQzUSwv3T5O -O data.zip && \
+    echo "Unzipping data..." && \
+    mkdir data && \
+    unzip data.zip -d data && \
+    echo "Removing downloaded zip file..." && \
+    rm data.zip
+
 COPY . /app/
 
 # SHELL ["conda", "run", "-n", "${CONDA_ENV_NAME}", "/bin/bash", "-c"] # Comment out SHELL for this test
