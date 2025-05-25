@@ -162,46 +162,26 @@ def getStatsFromFile(path):
             polarity_vector.append(lines[i + 2].strip().split()[0])
     return size, polarity_vector
 
-def loadHyperData(config, loadData, percentage=0.8):
+def loadHyperData (config,loadData,percentage=0.8):
     FLAGS = config
 
     if loadData:
         """Splits a file in 2 given the `percentage` to go in the large file."""
         random.seed(12345)
-        print("\nData Split Statistics:")
-        print(f"Source training file: {FLAGS.train_path}")
-        print(f"Output hyper-train file: {FLAGS.hyper_train_path}")
-        print(f"Output hyper-validation file: {FLAGS.hyper_eval_path}")
-        
         with open(FLAGS.train_path, 'r') as fin, \
         open(FLAGS.hyper_train_path, 'w') as foutBig, \
         open(FLAGS.hyper_eval_path, 'w') as foutSmall:
             lines = fin.readlines()
-            total_observations = len(lines) // 3  # Since each observation is 3 lines
-            print(f"\nTotal observations in source file: {total_observations}")
 
             chunked = [lines[i:i+3] for i in range(0, len(lines), 3)]
             random.shuffle(chunked)
             numlines = int(len(chunked)*percentage)
-            
-            # Write and count training data
-            train_obs = 0
             for chunk in chunked[:numlines]:
                 for line in chunk:
                     foutBig.write(line)
-                train_obs += 1
-                
-            # Write and count validation data
-            val_obs = 0
             for chunk in chunked[numlines:]:
                 for line in chunk:
                     foutSmall.write(line)
-                val_obs += 1
-
-            print(f"\nSplit Statistics:")
-            print(f"Training observations: {train_obs} ({percentage*100:.1f}%)")
-            print(f"Validation observations: {val_obs} ({(1-percentage)*100:.1f}%)")
-            print(f"Total observations after split: {train_obs + val_obs}")
 
     #get statistic properties from txt file
     train_size, train_polarity_vector = getStatsFromFile(FLAGS.hyper_train_path)
@@ -211,47 +191,35 @@ def loadHyperData(config, loadData, percentage=0.8):
 
 def loadCrossValidation (config, split_size, load=True):
     FLAGS = config
-    
     if load:
-        words, sent = [], [], []
-        # words,svmwords, sent = [], [], []
+        words,svmwords, sent = [], [], []
 
-        with open(FLAGS.train_path,encoding='cp1252') as f:
-        # with open(FLAGS.train_path,encoding='cp1252') as f, \
-        #  open(FLAGS.train_svm_path,encoding='cp1252') as svm:
-            
-            # Read and process the main training file
+        with open(FLAGS.train_path,encoding='cp1252') as f, \
+         open(FLAGS.train_svm_path,encoding='cp1252') as svm:
             lines = f.readlines()
             for i in range(0, len(lines), 3):
                 words.append([lines[i], lines[i + 1], lines[i + 2]])
                 sent.append(lines[i + 2].strip().split()[0])
             words = np.asarray(words)
 
-            # svmlines = svm.readlines()
-            # for i in range(0, len(svmlines) ,4):
-            #     svmwords.append([svmlines[i], svmlines[i + 1], svmlines[i + 2], svmlines[i + 3]])
-            # svmwords = np.asarray(svmwords)
+            svmlines = svm.readlines()
+            for i in range(0, len(svmlines) ,4):
+                svmwords.append([svmlines[i], svmlines[i + 1], svmlines[i + 2], svmlines[i + 3]])
+            svmwords = np.asarray(svmwords)
 
             sent = np.asarray(sent)
 
-            # Counter for fold number 
             i=0
             kf = StratifiedKFold(n_splits=split_size, shuffle=True, random_state=12345)
-
-            # Split the data into training and validation sets
             for train_idx, val_idx in kf.split(words, sent):
                 words_1 = words[train_idx]
                 words_2 = words[val_idx]
-                # svmwords_1 = svmwords[train_idx]
-                # svmwords_2 = svmwords[val_idx]
-
+                svmwords_1 = svmwords[train_idx]
+                svmwords_2 = svmwords[val_idx]
                 with open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_train_'+ str(i) +'.txt', 'w') as train, \
-                open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'+ str(i) +'.txt', 'w') as val:                
-                # with open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_train_'+ str(i) +'.txt', 'w') as train, \
-                # open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'+ str(i) +'.txt', 'w') as val, \
-                # open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_train_svm_'+ str(i) +'.txt', 'w') as svmtrain, \
-                # open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_svm_'+ str(i) +'.txt', 'w') as svmval:
-
+                open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'+ str(i) +'.txt', 'w') as val, \
+                open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_train_svm_'+ str(i) +'.txt', 'w') as svmtrain, \
+                open("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/svm/cross_val_svm_'+ str(i) +'.txt', 'w') as svmval:
                     for row in words_1:
                         train.write(row[0])
                         train.write(row[1])
@@ -260,25 +228,20 @@ def loadCrossValidation (config, split_size, load=True):
                         val.write(row[0])
                         val.write(row[1])
                         val.write(row[2])
-                    # for row in svmwords_1:
-                    #     svmtrain.write(row[0])
-                    #     svmtrain.write(row[1])
-                    #     svmtrain.write(row[2])
-                    #     svmtrain.write(row[3])
-                    # for row in svmwords_2:
-                    #     svmval.write(row[0])
-                    #     svmval.write(row[1])
-                    #     svmval.write(row[2])
-                    #     svmval.write(row[3])
-
+                    for row in svmwords_1:
+                        svmtrain.write(row[0])
+                        svmtrain.write(row[1])
+                        svmtrain.write(row[2])
+                        svmtrain.write(row[3])
+                    for row in svmwords_2:
+                        svmval.write(row[0])
+                        svmval.write(row[1])
+                        svmval.write(row[2])
+                        svmval.write(row[3])
                 i += 1
-                
-    # Get statistical properties from first training fold
+        #get statistic properties from txt file
     train_size, train_polarity_vector = getStatsFromFile("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_train_0.txt')
-    
     test_size, test_polarity_vector = [], []
-
-    # Get statistical properties from each validation fold
     for i in range(split_size):
         test_size_i, test_polarity_vector_i = getStatsFromFile("data/programGeneratedData/crossValidation"+str(FLAGS.year)+'/cross_val_'+str(i)+'.txt')
         test_size.append(test_size_i)

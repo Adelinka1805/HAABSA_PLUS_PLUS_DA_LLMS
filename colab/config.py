@@ -21,7 +21,8 @@ tf.app.flags.DEFINE_integer('max_sentence_len', 80, 'max number of tokens per se
 tf.app.flags.DEFINE_integer('max_doc_len', 20, 'max number of tokens per sentence')
 tf.app.flags.DEFINE_float('random_base', 0.01, 'initial random base')
 tf.app.flags.DEFINE_integer('display_step', 4, 'number of test display step')
-tf.app.flags.DEFINE_integer('n_iter', 20, 'number of train iter') # WHEN TUNNING TEH MAIN MODEL SET TO 100, WHEN RUNNING HYPERPARAMETER OPTIMIZATION SET TO 20 SO YOU HAVE 20 EPOCHS
+tf.app.flags.DEFINE_integer('n_iter', 100, 'number of train iter') # NOTE: number of iterations for training (epochs) used in the main method of model
+tf.app.flags.DEFINE_string('t1', 'last', 'type of hidden output')
 tf.app.flags.DEFINE_string('t2', 'last', 'type of hidden output')
 tf.app.flags.DEFINE_integer('n_layer', 3, 'number of stacked rnn')
 tf.app.flags.DEFINE_string('is_r', '1', 'prob')
