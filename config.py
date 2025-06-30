@@ -1,18 +1,13 @@
-#!/usr/bin/env python
-# encoding: utf-8
 
 import tensorflow as tf
 import sys
 
 
 FLAGS = tf.app.flags.FLAGS
-# NOTE: inside the brackets we have (name, default_value, description)
-# NOTE the name is used in the code, if the user does not specify the name in the code, then the program will take the default name
 # general variables
 tf.app.flags.DEFINE_string('embedding_type', 'BERT','can be: glove, word2vec-cbow, word2vec-SG, fasttext, BERT, BERT_Large, ELMo')
-tf.app.flags.DEFINE_integer("year", 2015, "year data set [2015/2016]")
-# EDA-adjusted is also implemented, but not considered in this research
-tf.app.flags.DEFINE_string('da_type', 'none','type of data augmentation method (can be: none, EDA-adjusted, BERT, C_BERT, BERT_prepend)')
+tf.app.flags.DEFINE_integer("year", 2016, "year data set [2015/2016]")
+tf.app.flags.DEFINE_string('da_type', 'GPT4_balanced','type of data augmentation method (can be: none, EDA-adjusted, BERT, C_BERT, BERT_prepend) or if you are using LLMs for augmentation can be: GPT4_balanced, GPT4_proportional, LLAMA3_balanced, LLAMA3_proportional, sentence_LLM-DA-ABSC_contextual, LLM-DA-ABSC_category')
 tf.app.flags.DEFINE_integer('embedding_dim', 768, 'dimension of word embedding')
 tf.app.flags.DEFINE_integer('batch_size', 20, 'number of example per batch')
 tf.app.flags.DEFINE_integer('n_hidden', 300, 'number of hidden unit')
@@ -21,7 +16,7 @@ tf.app.flags.DEFINE_integer('max_sentence_len', 80, 'max number of tokens per se
 tf.app.flags.DEFINE_integer('max_doc_len', 20, 'max number of tokens per sentence')
 tf.app.flags.DEFINE_float('random_base', 0.01, 'initial random base')
 tf.app.flags.DEFINE_integer('display_step', 4, 'number of test display step')
-tf.app.flags.DEFINE_integer('n_iter', 20, 'number of train iter') # WHEN TUNNING TEH MAIN MODEL SET TO 100, WHEN RUNNING HYPERPARAMETER OPTIMIZATION SET TO 20 SO YOU HAVE 20 EPOCHS
+tf.app.flags.DEFINE_integer('n_iter', 100, 'number of train iter') # WHEN TUNNING TEH MAIN MODEL SET TO 100, WHEN RUNNING HYPERPARAMETER OPTIMIZATION SET TO 20 SO YOU HAVE 20 EPOCHS
 tf.app.flags.DEFINE_string('t2', 'last', 'type of hidden output')
 tf.app.flags.DEFINE_integer('n_layer', 3, 'number of stacked rnn')
 tf.app.flags.DEFINE_string('is_r', '1', 'prob')
@@ -31,14 +26,13 @@ tf.app.flags.DEFINE_integer('max_target_len', 19, 'max target length')
 # HYPERPARAMETERS TUNED IN THIS RESEARCH (FOR REPRODUCING RESEARCH RESULTS, USE THE HYPERPARAMETERS AS SPECIFIED IN README.MD) #
 ################################################################################################################################
 # order of hyperparameters: learning_rate, keep_prob, momentum, l2, batch_size
-tf.app.flags.DEFINE_float('learning_rate', 0.08, 'learning rate')
-tf.app.flags.DEFINE_float('keep_prob1', 0.6000000000000001, 'dropout keep prob for the hidden layers of the lcr-rot mode (tuned)')
-tf.app.flags.DEFINE_float('keep_prob2', 0.6000000000000001, 'dropout keep prob')
+tf.app.flags.DEFINE_float('learning_rate', 0.1, 'learning rate')
+tf.app.flags.DEFINE_float('keep_prob1', 0.5, 'dropout keep prob for the hidden layers of the lcr-rot mode (tuned)')
+tf.app.flags.DEFINE_float('keep_prob2', 0.5, 'dropout keep prob')
 tf.app.flags.DEFINE_float('momentum', 0.9, 'momentum')
-tf.app.flags.DEFINE_float('l2_reg', 0.01, 'l2 regularization')
+tf.app.flags.DEFINE_float('l2_reg', 0.001, 'l2 regularization')
 # these three booleans should generally have the same value (except when troubleshooting)
-tf.app.flags.DEFINE_boolean('do_create_raw_files', True, 'whether raw files have to be created, always true when running model for first time')
-# NOTE set to true for now
+tf.app.flags.DEFINE_boolean('do_create_raw_files', True, 'whether raw files have to be created, always true when running model for first time') 
 tf.app.flags.DEFINE_boolean('do_create_augmentation_files', True, 'whether the augmentation file should be made, always true for first time using a DA method')
 tf.app.flags.DEFINE_string('augmentation_file_path', 'data/programGeneratedData/'+FLAGS.da_type+'_augmented_data' + str(FLAGS.year)+'.txt', 'augmented train file')
 
@@ -54,12 +48,13 @@ tf.app.flags.DEFINE_string("train_path_ont", "data/programGeneratedData/GloVetra
 tf.app.flags.DEFINE_string("test_path_ont", "data/programGeneratedData/GloVetestdata"+str(FLAGS.year)+".txt", "formatted test data path")
 tf.app.flags.DEFINE_string("train_path", "data/programGeneratedData/" + str(FLAGS.embedding_type) +str(FLAGS.embedding_dim)+'traindata'+str(FLAGS.year)+'_'+str(FLAGS.da_type)+".txt", "train data path")
 tf.app.flags.DEFINE_string("test_path", "data/programGeneratedData/" + str(FLAGS.embedding_type) + str(FLAGS.embedding_dim)+'testdata'+str(FLAGS.year)+'_'+str(FLAGS.da_type)+".txt", "formatted test data path")
-# NOTE: if we do not use it, can we delete it ?
+
 #tf.app.flags.DEFINE_string("train_path", 'data/programGeneratedData/' + str(FLAGS.embedding_dim) + 'traindata' + str(FLAGS.year) + 'BERT.txt', "train data path")
 #tf.app.flags.DEFINE_string("test_path", 'data/programGeneratedData/' + str(FLAGS.embedding_dim) + 'testdata' + str(FLAGS.year) + 'BERT.txt', "formatted test data path")
+
 tf.app.flags.DEFINE_string("embedding_path", "data/programGeneratedData/" + str(FLAGS.embedding_type) + str(FLAGS.embedding_dim)+'embedding'+str(FLAGS.year)+ '_'+ str(FLAGS.da_type)+".txt", "pre-trained glove vectors file path")
-#tf.app.flags.DEFINE_string("embedding_path", "data/programGeneratedData/BERT_base.txt", "pre-trained glove vectors file path")
-# NOTE: if we do not use line below, can we delete it?
+# tf.app.flags.DEFINE_string("embedding_path", "data/programGeneratedData/BERT_base.txt", "pre-trained glove vectors file path")
+# Below paths are not used in this implementation 
 tf.app.flags.DEFINE_string("remaining_test_path_ELMo", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'remainingtestdata'+str(FLAGS.year)+"ELMo.txt", "only for printing")
 tf.app.flags.DEFINE_string("remaining_test_path", "data/programGeneratedData/"+str(FLAGS.embedding_dim)+'remainingtestdata'+str(FLAGS.year)+".txt", "formatted remaining test data path after ontology")
 
@@ -105,38 +100,24 @@ tf.app.flags.DEFINE_string('method', 'AE', 'model type: AE, AT or AEAT')
 tf.app.flags.DEFINE_string('prob_file', 'prob1.txt', 'prob')
 tf.app.flags.DEFINE_string('saver_file', 'prob1.txt', 'prob')
 
-# NOTE: this function prints out all the command-line flag values defined using tf.app.flags
-# NOTE: could be used for debugging purposes 
 def print_config():
     # FLAGS._parse_flags()
     FLAGS(sys.argv)
     print('\nParameters:')
-    # NOTE: loop over all defined flags and print flagnames + their current values
     for k, v in sorted(tf.app.flags.FLAGS.flag_values_dict().items()):
         print('{}={}'.format(k, v))
 
-# NOTE: computes a loss for a model, most likely in classification tasks
-# NOTE: takes in a true label y and the predicted probabilities from the model
 def loss_func(y, prob):
     reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    # NOTE: cross-entropy loss: categorical cross-entropy + regularization loss
-    # NOTE: ATTENTION can break if the prob is 0 bc log(prob) is not defined then
     loss = - tf.reduce_mean(y * tf.log(prob)) + sum(reg_loss)
-    # NOTE: returns total loss
     return loss
 
-# NOTE: computes accuracy for a classification model
 def acc_func(y, prob):
     correct_pred = tf.equal(tf.argmax(prob, 1), tf.argmax(y, 1))
-    # NOTE: Total number of correct predictions
     acc_num = tf.reduce_sum(tf.cast(correct_pred, tf.int32))
-    # NOTE: Accuracy a percentage
     acc_prob = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
     return acc_num, acc_prob
 
-# NOTE: sets up the training operation (i.e., how the model should minimize the loss during training)
-# NOTE: loss is the loss tensor you want to minimize, r is the learning rate,
-# NOTE: gloabl_step is the number of training steps, optimizer is the function passed by a user, if not provided the defaulr is Adam
 def train_func(loss, r, global_step, optimizer=None):
     if optimizer:
         return optimizer(learning_rate=r).minimize(loss, global_step=global_step)
@@ -158,7 +139,6 @@ def summary_func(loss, acc, test_loss, test_acc, _dir, title, sess):
     return train_summary_op, test_summary_op, validate_summary_op, \
         train_summary_writer, test_summary_writer, validate_summary_writer
 
-# NOTE: for saving the model
 def saver_func(_dir):
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V2, max_to_keep=1000)
     import os

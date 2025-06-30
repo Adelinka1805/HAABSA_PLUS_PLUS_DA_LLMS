@@ -1,3 +1,5 @@
+# https://github.com/BronHol/HAABSA_PLUS_PLUS_DA
+
 ''' Run the following code in Google Colab to obtain the BERT embeddings. Therefore, you need to upload the raw data files containing the train and test dataset.
     Perform this step after you made the data augmentations.'''
 

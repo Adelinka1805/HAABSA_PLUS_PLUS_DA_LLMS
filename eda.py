@@ -1,3 +1,5 @@
+# https://github.com/BronHol/HAABSA_PLUS_PLUS_DA
+
 # Easy data augmentation techniques for text classification
 # Jason Wei and Kai Zou, adjusted by Tomas Liesting
 
@@ -32,25 +34,36 @@ stop_words = ['i', 'me', 'my', 'myself', 'we', 'our',
 # cleaning up text
 import re
 
+'''
+Main method to run augmentation.
+'''
 def file_maker_eda(in_file, out_file, FLAGS, adjusted):
     print('Starting EasyData-augmentation')
+
     with open(in_file, 'r') as in_f, open(out_file, 'w+', encoding='utf-8') as out_f:
         lines = in_f.readlines()
+
         for i in range(0, len(lines) - 1, 3):
-            print(i)
+            # print(i)
+
             old_sentence = lines[i].strip()
             target = lines[i + 1].strip()
             sentiment = lines[i + 2].strip()
             augmented_sentences = eda(old_sentence,target,alpha_sr=FLAGS.EDA_replacement, alpha_ri=FLAGS.EDA_insertion, alpha_rs=FLAGS.EDA_swap, p_rd=FLAGS.EDA_deletion, percentage=FLAGS.EDA_pct, adjusted=adjusted)
+
             out_f.writelines([old_sentence + '\n', target + '\n', sentiment + '\n'])
             out_f.writelines([augmented_sentences[0] + '\n', target + '\n', sentiment + '\n'])
             out_f.writelines([augmented_sentences[1] + '\n', target + '\n', sentiment + '\n'])
             out_f.writelines([augmented_sentences[2] + '\n', target + '\n', sentiment + '\n'])
+
             if not adjusted:
                 out_f.writelines([augmented_sentences[3] + '\n', target + '\n', sentiment + '\n'])
+
     return out_file
 
-
+'''
+Method that cleans text from special characters
+'''
 def get_only_chars(line):
     clean_line = ""
 
@@ -84,16 +97,21 @@ from nltk.corpus import wordnet
 import nltk
 from pywsd import simple_lesk
 
+'''
+Replaces words with synonums 
+'''
 def synonym_replacement(words, aspect, n, adjusted):
     new_words = words.copy()
     random_word_list = list(set([word for word in words if word not in stop_words and word != '$t$']))
     random.shuffle(random_word_list)
     num_replaced = 0
+
     for random_word in random_word_list:
         if not adjusted:
             synonyms = get_synonyms(random_word)
         else:
             synonyms = get_synonyms_adjusted(words, aspect, random_word)
+
         if len(synonyms) >= 1:
             synonym = random.choice(list(synonyms))
             temp = []
@@ -104,9 +122,10 @@ def synonym_replacement(words, aspect, n, adjusted):
                     replaced = True
                 else:
                     temp.append(word)
-            #print("replaced", random_word, "with", synonym)
+            # print("replaced", random_word, "with", synonym)
             num_replaced += 1
             new_words = temp
+
         if num_replaced >= n:  # only replace up to n words
             break
 
@@ -240,7 +259,7 @@ def add_word(new_words, adjusted=False):
 # main data augmentation function
 ########################################################################
 
-def eda(sentence, aspect, alpha_sr=0, alpha_ri=0, alpha_rs=0, p_rd=0, percentage=.2, adjusted=False, counter=None):
+def eda(sentence, aspect, alpha_sr=0, alpha_ri=0, alpha_rs=0, p_rd=0, percentage=.2, adjusted=True, counter=None):
     # sentence = get_only_chars(sentence)
     words = sentence.split(' ')
     words = [word for word in words if word is not '']

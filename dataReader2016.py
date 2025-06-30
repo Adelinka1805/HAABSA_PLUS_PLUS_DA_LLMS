@@ -1,3 +1,5 @@
+# https://github.com/BronHol/HAABSA_PLUS_PLUS_DA
+
 import os
 import json
 import xml.etree.ElementTree as ET
@@ -32,7 +34,6 @@ def _get_data_tuple(sptoks, asp_termIn, label):
             aspect_is = list(range(_i,_i+len(asp_termIn)))
             break
 
-    # NOTE commented out print statement
     # print(aspect_is)
     pos_info = []
     for _i, sptok in enumerate(sptoks):
@@ -161,5 +162,3 @@ def read_data_2016(fname, source_count, source_word2idx, target_count, target_ph
     print("Read %s aspects from %s" % (len(source_data), fname))
     print(countConfl)
     return source_data, source_loc_data, target_data, target_label, max_sent_len, source_loc_data, max_target_len
-
-

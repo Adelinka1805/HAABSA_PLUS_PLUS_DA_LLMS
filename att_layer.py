@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
+# https://github.com/BronHol/HAABSA_PLUS_PLUS_DA
 
 import numpy as np
 import tensorflow as tf

@@ -1,3 +1,5 @@
+# https://github.com/BronHol/HAABSA_PLUS_PLUS_DA
+
 import string
 from transformers import BertTokenizer
 from transformers import pipeline
@@ -8,7 +10,7 @@ from config import *
 
 BERT_MODEL = 'bert-base-uncased'
 tokenizer = BertTokenizer.from_pretrained(BERT_MODEL)
-unmasker = pipeline(task='fill-mask', model=FLAGS.finetune_model_dir, tokenizer='bert-base-uncased', topk = 3)
+unmasker = pipeline(task='fill-mask', model=FLAGS.finetune_model_dir, tokenizer='bert-base-uncased', top_k=3)
 rd.seed(546297)
 
 def file_maker_prepend(in_file, out_file):
@@ -29,6 +31,7 @@ def augment_sentence_prepend(in_sentence, in_target, in_sentiment):
 
     words = tokenizer.tokenize(in_sentence)
     tar = re.findall(r'\w+|[^\s\w]+', in_target)
+
     for word in tar:
         word = tokenizer.tokenize(word)
     tar_length = len(tar)
@@ -120,8 +123,10 @@ def augment_sentence_prepend(in_sentence, in_target, in_sentiment):
                 augmentend_sentence.append(words[i])
                 i+=1
 
-    augmentend_sentence_str = ' '.join(augmentend_sentence)
-    return augmentend_sentence_str
+    #augmentend_sentence_str = ' '.join(augmentend_sentence)
+    augmented_sentence_str = tokenizer.convert_tokens_to_string(augmentend_sentence)
+
+    return augmented_sentence_str
 
 def is_punctuation(word):
     return all(char in string.punctuation for char in word)

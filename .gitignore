@@ -2,7 +2,8 @@
 data/externalData/*.txt
 data/externalData/*.xml
 data/externalData/*.owl
-data/programGeneratedData/
+data/programGeneratedData/*
+!data/programGeneratedData/raw_data/
 data/externalData/
 
 # Python

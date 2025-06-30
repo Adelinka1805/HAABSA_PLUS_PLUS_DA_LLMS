@@ -8,10 +8,14 @@ Additionally, change the number of train iterations (n_iter) in config.py to 20,
 
 import tensorflow as tf
 import lcrModelAlt_hierarchical_v4
+
 from OntologyReasoner import OntReasoner
+
 from loadData import *
+
 # Import parameter configuration and data paths
 from config import *
+
 # Import modules
 import random
 from hyperopt import hp, tpe, fmin, Trials, STATUS_OK
@@ -22,21 +26,20 @@ import os
 import traceback
 from bson import json_util
 import json
-# from tqdm import tqdm  # Add tqdm for progress bars
 
 # Test data is validation data 
 train_size, test_size, train_polarity_vector, test_polarity_vector = loadHyperData(FLAGS, True)
-# Even though is defined here and is passed to the mode, in reality does not have any effect on the obtained result when running hyperparameter optimization   
-remaining_size = 248
-# Hard coded accuracy from the ontology -> NOTE: should we replace for every year bc the ontology accuracy can be different?      
-accuracyOnt = 0.87         
 
-# Define hyperparmeter space
+# Even though is defined here and is passed to the mode, in reality does not have any effect on the obtained result when running hyperparameter optimization   
+remaining_size = 301
+# Hard coded accuracy from the ontology -> NOTE: SHOULD BE REPLACED FOR EVERY YEAR BECAUSE THE ONTOLOGY ACCURACY DIFFERS       
+accuracyOnt = 0.8277        
+
 lcrspace = [
-                hp.loguniform('learning_rate', np.log(0.01), np.log(0.1)),  # NOTE: Try values between 0.01 and 0.1
-                hp.quniform('keep_prob', 0.45, 0.75, 0.1),                  # NOTE: Dropout between 45% to 75%
-                hp.choice('momentum', [0.85, 0.9, 0.95]),                   # NOTE: Momentum values
-                hp.choice('l2', [0.0001, 0.001]),                           # NOTE: L2 regularization values
+                hp.choice('learning_rate', [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]),
+                hp.quniform('keep_prob', 0.25, 0.75, 0.05),
+                hp.choice('momentum', [0.85, 0.9, 0.95, 0.99]),
+                hp.choice('l2', [0.00001, 0.0001, 0.001, 0.01, 0.1]),
             ]
 
 eval_num = 0
@@ -45,28 +48,29 @@ best_hyperparams = None
 
 def lcr_alt_objective(hyperparams):
     global eval_num, best_loss, best_hyperparams
+
     eval_num += 1
     (learning_rate, keep_prob, momentum, l2) = hyperparams
     print(f"\n\nEval {eval_num} with hyperparams: {hyperparams}")
 
-    # l here is the best accuracy on the validation set, we only need it 
     l, pred1, fw1, bw1, tl1, tr1 = lcrModelAlt_hierarchical_v4.main(FLAGS.hyper_train_path, FLAGS.hyper_eval_path, accuracyOnt, test_size, remaining_size, learning_rate, keep_prob, momentum, l2)
-    # NOTE: resets the tensorflow computationsal graph to ensure a clean slate for the next trial 
+
     tf.reset_default_graph()
 
-    # Save training results to disks with unique filenames
+    print ("Current loss in this iteration: ", l)
+
+    result = {
+        'loss':   -l,
+        'status': STATUS_OK,
+        'space': hyperparams,
+    }
 
     if best_loss is None or -l < best_loss:
         best_loss = -l
         best_hyperparams = hyperparams
 
-    result = {
-            'loss':   -l,
-            'status': STATUS_OK,
-            'space': hyperparams,
-        }
-
-    save_json_result(str(l), result)
+        # Save only if best 
+        save_json_result(str(l), result)
 
     return result
  
@@ -88,20 +92,19 @@ def run_a_trial():
 
     best = fmin(
         # Insert the method opbjective funtion
-        lcr_alt_objective,              # NOTE: This is the objective function to minimize -> should it be lcrModelAlt_hierarchical_v4?
+        lcr_alt_objective,
         # Define the methods hyperparameter space
-        space     = lcrspace,           # NOTE: This is the hyperparameter space we defined
-        algo      = tpe.suggest,        # NOTE: Use Tree of Parzen Estimators (Bayesian search)
-        trials=trials,                  # NOTE: Keep history of previous trials
-        max_evals=max_evals             # NOTE: Only run one new evaluation per loop
+        space     = lcrspace,
+        algo      = tpe.suggest,
+        trials    = trials,
+        max_evals = max_evals
     )
-    # NOTE: Save the current state so we can continue later
+
     pickle.dump(trials, open("results.pkl", "wb"))
 
     print("\nOPTIMIZATION STEP COMPLETE.\n")
     print(best_hyperparams)
 
-# NOTE: Utility functions to save and load trial results from disk
 def print_json(result):
     """Pretty-print a jsonable structure (e.g.: result)."""
     print(json.dumps(

@@ -22,6 +22,8 @@
 Fine-tuning the library models for language modeling on a text file (GPT, GPT-2, BERT, RoBERTa).
 GPT and GPT-2 are fine-tuned using a causal language modeling (CLM) loss while BERT and RoBERTa are fine-tuned
 using a masked language modeling (MLM) loss.
+
+Run this program together with Finetune_Colab.py in Colab for BERT finetuning before DA.
 """
 
 
@@ -181,20 +183,30 @@ def mask_tokens(inputs: torch.Tensor, tokenizer: PreTrainedTokenizer, args) -> T
     ]
     probability_matrix.masked_fill_(torch.tensor(special_tokens_mask, dtype=torch.bool), value=0.0)
     masked_indices = torch.bernoulli(probability_matrix).bool()
-    labels[~masked_indices] = -1  # We only compute loss on masked tokens
+
+    # Original 
+    #labels[~masked_indices] = -1  # We only compute loss on masked tokens
+    
+    # Adjust because running the original failed
+    labels[~masked_indices] = -100  # Use -100 as ignore index instead of -1
+    
     #probability_matrix.masked_fill_(torch.tensor(special_tokens_mask, dtype=torch.uint8), value=0.0) # dtype=torch.bool
     #masked_indices = torch.bernoulli(probability_matrix).type(torch.uint8) #.bool()
     #labels[~masked_indices] = -100
     #labels[~masked_indices] = -100 * torch.ones_like(labels, dtype=torch.long)  # We only compute loss on masked tokens
 
     # 80% of the time, we replace masked input tokens with tokenizer.mask_token ([MASK])
-    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).type(torch.uint8) & masked_indices #.bool()
-    inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    indices_replaced = torch.bernoulli(torch.full(labels.shape, 0.8)).bool() & masked_indices
+    mask_token_id = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    inputs[indices_replaced] = mask_token_id
 
     # 10% of the time, we replace masked input tokens with random word
-    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).type(torch.uint8) & masked_indices & ~indices_replaced #.bool()
-    random_words = torch.randint(len(tokenizer), labels.shape, dtype=torch.long)
+    indices_random = torch.bernoulli(torch.full(labels.shape, 0.5)).bool() & masked_indices & ~indices_replaced
+    random_words = torch.randint(0, len(tokenizer), labels.shape, dtype=torch.long)
     inputs[indices_random] = random_words[indices_random]
+
+    assert torch.all(inputs >= 0) and torch.all(inputs < len(tokenizer)), "Input tokens out of vocabulary range"
+    assert torch.all((labels == -100) | (labels >= 0) & (labels < len(tokenizer))), "Label tokens out of vocabulary range"
 
     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
     return inputs, labels
@@ -310,8 +322,23 @@ def train(args, train_dataset, model, tokenizer):
             inputs = inputs.to(args.device)
             labels = labels.to(args.device)
             model.train()
-            outputs = model(inputs, masked_lm_labels=labels) if args.mlm else model(inputs, labels=labels)
-            loss = outputs[0]  # model outputs are always tuple in transformers (see doc)
+
+            # Configure the model to use -1 as ignore_index
+            model.config.label_smoothing = 0.0 # Disable label smoothing
+            model.config.tie_word_embeddings = True
+
+            try: 
+              outputs = model(inputs, labels=labels)
+              loss = outputs[0]
+            except RuntimeError as e:
+               print(f"Error in forward pass. Input shape: {inputs.shape}, Label shape: {labels.shape}")
+               print(f"Input range: [{inputs.min()}, {inputs.max()}], Label range: [{labels.min()}, {labels.max()}]")
+               print(f"Vocabulary size: {len(tokenizer)}")
+               raise e 
+            
+            # Original code but seems to be the cuase of aout of bound problem so now is coded such that raises exception
+            # outputs = model(inputs, labels=labels)
+            # loss = outputs[0]  # model outputs are always tuple in transformers (see doc)
 
             if args.n_gpu > 1:
                 loss = loss.mean()  # mean() to average on multi-gpu parallel training
@@ -413,7 +440,7 @@ def evaluate(args, model, tokenizer, prefix=""):
         labels = labels.to(args.device)
 
         with torch.no_grad():
-            outputs = model(inputs, masked_lm_labels=labels) if args.mlm else model(inputs, labels=labels)
+            outputs = model(inputs, labels=labels)
             lm_loss = outputs[0]
             eval_loss += lm_loss.mean().item()
         nb_eval_steps += 1

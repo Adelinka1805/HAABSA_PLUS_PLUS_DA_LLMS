@@ -1,3 +1,5 @@
+# This file is commented out as it is not used in this implementation 
+
 '''
 This code can be run using Google Colab, with TPU. Copy paste code to Google Colab, using  Google account
 In line 48, the model can be changed to base or large
