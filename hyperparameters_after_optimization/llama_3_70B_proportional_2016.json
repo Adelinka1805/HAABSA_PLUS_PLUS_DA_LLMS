@@ -1,0 +1,6 @@
+{
+    "learning_rate": 0.08,
+    "keep_rate": 0.4,
+    "momentum": 0.85,
+    "l2_reg": 0.01
+  }
